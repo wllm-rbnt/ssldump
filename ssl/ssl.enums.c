@@ -199,6 +199,7 @@ static int decode_HandshakeType_ClientHello(ssl,dir,seg,data)
     UINT4 vj,vn,cs,cslen,complen,comp,odd,exlen,ex;
     Data session_id,random;
     int r;
+    int _status=0;
     char *ja3_fp = NULL;
     char *ja3_str = NULL;
     char *ja3_ver_str = NULL;
@@ -216,8 +217,8 @@ static int decode_HandshakeType_ClientHello(ssl,dir,seg,data)
 
     LF;
     ssl_update_handshake_messages(ssl,data);
-    SSL_DECODE_UINT8(ssl,0,0,data,&vj);
-    SSL_DECODE_UINT8(ssl,0,0,data,&vn);
+    SSL_DECODE_UINT8_ABORT(ssl,0,0,data,&vj);
+    SSL_DECODE_UINT8_ABORT(ssl,0,0,data,&vn);
 
     ja3_ver_str = calloc(7,sizeof(char));
     snprintf(ja3_ver_str, 7, "%u", ((vj & 0xff) << 8) | (vn & 0xff));
@@ -226,10 +227,10 @@ static int decode_HandshakeType_ClientHello(ssl,dir,seg,data)
         LF;
     }
 
-    SSL_DECODE_OPAQUE_ARRAY(ssl,"random",32,P_ND,data,&random);
+    SSL_DECODE_OPAQUE_ARRAY_ABORT(ssl,"random",32,P_ND,data,&random);
     ssl_set_client_random(ssl->decoder,random.data,random.len);
 
-    SSL_DECODE_OPAQUE_ARRAY(ssl,"session_id",-32,0,data,&session_id);
+    SSL_DECODE_OPAQUE_ARRAY_ABORT(ssl,"session_id",-32,0,data,&session_id);
     ssl_set_client_session_id(ssl->decoder,session_id.data,session_id.len);
 
     P_(P_HL){
@@ -241,7 +242,7 @@ static int decode_HandshakeType_ClientHello(ssl,dir,seg,data)
       session_id.len);
 
     P_(P_HL){
-	SSL_DECODE_UINT16(ssl,"cipher Suites len",0,data,&cslen);
+	SSL_DECODE_UINT16_ABORT(ssl,"cipher Suites len",0,data,&cslen);
         explain(ssl,"cipher suites\n");
 
         odd = cslen % 2;
@@ -267,20 +268,20 @@ static int decode_HandshakeType_ClientHello(ssl,dir,seg,data)
 		ja3_cs_str[strlen(ja3_cs_str) - 1] = '\0';
     }
 
-    SSL_DECODE_UINT8(ssl,"compressionMethod len",0,data,&complen);
+    SSL_DECODE_UINT8_ABORT(ssl,"compressionMethod len",0,data,&complen);
     if(complen){
       explain(ssl,"compression methods\n");
       for(;complen;complen--){
-        SSL_DECODE_ENUM(ssl,0,1,compression_method_decoder,P_HL,data,&comp);
+        SSL_DECODE_ENUM_ABORT(ssl,0,1,compression_method_decoder,P_HL,data,&comp);
         LF;
       }
     }
 
-    SSL_DECODE_UINT16(ssl,"extensions len",0,data,&exlen);
+    SSL_DECODE_UINT16_ABORT(ssl,"extensions len",0,data,&exlen);
     if (exlen) {
       explain(ssl , "extensions\n");
       while(data->len) {
-    	SSL_DECODE_UINT16(ssl, "extension type", 0, data, &ex);
+        SSL_DECODE_UINT16_ABORT(ssl, "extension type", 0, data, &ex);
         if(!ja3_ex_str)
             ja3_ex_str = calloc(7, 1);
         else
@@ -363,6 +364,7 @@ static int decode_HandshakeType_ClientHello(ssl,dir,seg,data)
     explain(ssl, "ja3 string: %s\n", ja3_str);
     explain(ssl, "ja3 fingerprint: %s\n", ja3_fp);
 
+abort:
     free(ja3_fp);
     free(ja3_str);
     free(ja3_ver_str);
@@ -371,7 +373,7 @@ static int decode_HandshakeType_ClientHello(ssl,dir,seg,data)
     free(ja3_ec_str);
     free(ja3_ecp_str);
 
-    return(0);
+    return(_status);
 
   }
 static int decode_HandshakeType_ServerHello(ssl,dir,seg,data)
@@ -382,6 +384,7 @@ static int decode_HandshakeType_ServerHello(ssl,dir,seg,data)
   {
 
     int r;
+    int _status=0;
     Data rnd,session_id;
     UINT4 vj,vn,exlen,ex;
     char *ja3s_fp = NULL;
@@ -399,8 +402,8 @@ static int decode_HandshakeType_ServerHello(ssl,dir,seg,data)
 
     LF;
     ssl_update_handshake_messages(ssl,data);
-    SSL_DECODE_UINT8(ssl,0,0,data,&vj);
-    SSL_DECODE_UINT8(ssl,0,0,data,&vn);
+    SSL_DECODE_UINT8_ABORT(ssl,0,0,data,&vj);
+    SSL_DECODE_UINT8_ABORT(ssl,0,0,data,&vn);
 
     ja3s_ver_str = calloc(7,sizeof(char));
     snprintf(ja3s_ver_str, 7, "%u", ((vj & 0xff) << 8) | (vn & 0xff));
@@ -411,10 +414,10 @@ static int decode_HandshakeType_ServerHello(ssl,dir,seg,data)
    }
 
 
-    SSL_DECODE_OPAQUE_ARRAY(ssl,"random",32,P_ND,data,&rnd);
+    SSL_DECODE_OPAQUE_ARRAY_ABORT(ssl,"random",32,P_ND,data,&rnd);
     ssl_set_server_random(ssl->decoder,rnd.data,rnd.len);
-    SSL_DECODE_OPAQUE_ARRAY(ssl,"session_id",-32,P_HL,data,&session_id);
-    SSL_DECODE_ENUM(ssl,"cipherSuite",2,cipher_suite_decoder,
+    SSL_DECODE_OPAQUE_ARRAY_ABORT(ssl,"session_id",-32,P_HL,data,&session_id);
+    SSL_DECODE_ENUM_ABORT(ssl,"cipherSuite",2,cipher_suite_decoder,
       0,data,&ssl->cipher_suite);
     P_(P_HL){
      explain(ssl,"cipherSuite ");
@@ -429,14 +432,14 @@ static int decode_HandshakeType_ServerHello(ssl,dir,seg,data)
       session_id.len);
 
     P_(P_HL) LF;
-    SSL_DECODE_ENUM(ssl,"compressionMethod",1,compression_method_decoder,P_HL,data,0);
+    SSL_DECODE_ENUM_ABORT(ssl,"compressionMethod",1,compression_method_decoder,P_HL,data,0);
     P_(P_HL) LF;
 
-    SSL_DECODE_UINT16(ssl,"extensions len",0,data,&exlen);
+    SSL_DECODE_UINT16_ABORT(ssl,"extensions len",0,data,&exlen);
     if (exlen) {
       explain(ssl , "extensions\n");
       while(data->len) {
-    	SSL_DECODE_UINT16(ssl, "extension type", 0, data, &ex);
+        SSL_DECODE_UINT16_ABORT(ssl, "extension type", 0, data, &ex);
         if(!ja3s_ex_str)
             ja3s_ex_str = calloc(7, 1);
         else
@@ -504,13 +507,14 @@ static int decode_HandshakeType_ServerHello(ssl,dir,seg,data)
     explain(ssl, "ja3s string: %s\n", ja3s_str);
     explain(ssl, "ja3s fingerprint: %s\n", ja3s_fp);
 
+abort:
     free(ja3s_fp);
     free(ja3s_str);
     free(ja3s_ver_str);
     free(ja3s_c_str);
     free(ja3s_ex_str);
 
-    return(0);
+    return(_status);
 
   }
 static int decode_HandshakeType_Certificate(ssl,dir,seg,data)
