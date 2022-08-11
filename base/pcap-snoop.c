@@ -267,6 +267,14 @@ void pcap_cb(ptr,hdr,data)
       case DLT_LINUX_SLL:
         data+=16;
         len-=16;
+        type=ntohs(e_hdr->ether_type);
+        break;
+#endif
+#ifdef DLT_LINUX_SLL2
+      case DLT_LINUX_SLL2:
+        data+=20;
+        len-=20;
+        type=ntohs(e_hdr->ether_type);
         break;
 #endif
 #ifdef DLT_IPNET
